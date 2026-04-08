@@ -311,6 +311,26 @@ function formatarValor(valor) {
 // ========================================
 
 /**
+ * Converte um valor para número, suportando formato de moeda brasileira (R$ 1.234,56)
+ * Resolve o bug onde parseFloat("R$ 1.234,56") retorna NaN e cai para 0
+ * @param {*} v - Valor a converter (número, string, etc.)
+ * @returns {number} Número convertido ou 0 se não for possível
+ */
+function parsearValorNumerico(v) {
+  if (typeof v === 'number') return v;
+  if (v === null || v === undefined || v === '') return 0;
+  var str = v.toString().trim()
+    .replace(/R\$\s*/g, '')  // Remove símbolo de moeda "R$ "
+    .replace(/\s/g, '');     // Remove espaços restantes
+  // Formato brasileiro: "1.234,56" — ponto é separador de milhar, vírgula é decimal
+  if (str.indexOf(',') !== -1) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  }
+  var num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
  * Lê dados da aba "Dados1" (ordem de compra, valor, cliente)
  * @returns {Array} Array de objetos com os dados
  */
@@ -353,14 +373,26 @@ function lerDados1() {
 
     var resultado = [];
     dados.forEach(function(row) {
-      if (row[0] && row[1]) { // Precisa ter pelo menos OC e Valor
+      // CORREÇÃO: Verifica se OC existe e se Valor não é nulo/vazio
+      // Antes: "if (row[0] && row[1])" excluía pedidos com valor numérico 0 (falsy em JS)
+      // Depois: aceita 0 como valor válido, rejeita apenas null/undefined/string vazia
+      var temOC = row[0] !== null && row[0] !== undefined && row[0] !== '';
+      var temValor = row[1] !== null && row[1] !== undefined && row[1] !== '';
+      if (temOC && temValor) {
+        var valorRaw = row[1];
+        // CORREÇÃO: Usa parsearValorNumerico() para suportar formato brasileiro "R$ 1.234,56"
+        // Antes: parseFloat("R$ 1.234,56") retornava NaN → valor ficava 0
+        var valorParsed = parsearValorNumerico(valorRaw);
+        if (valorParsed === 0 && valorRaw !== 0 && valorRaw !== '0') {
+          Logger.log("⚠️ Valor zerado após parse: OC=" + row[0] + " | tipo=" + (typeof valorRaw) + " | bruto='" + valorRaw + "'");
+        }
         resultado.push({
           ordemCompra: row[0].toString().trim(),
-          valor: typeof row[1] === 'number' ? row[1] : parseFloat(row[1]) || 0,
+          valor: valorParsed,
           cliente: row[2] ? row[2].toString().trim() : "Sem Cliente",
           dataRecebimento: row[3] || null, // Coluna D (índice 3) - pode ser Date ou string
           unidade: row[4] ? row[4].toString().trim().toUpperCase() : "", // Coluna E (índice 4) - CM ou MM
-          quantidade: typeof row[5] === 'number' ? row[5] : parseFloat(row[5]) || 0  // Coluna F (índice 5)
+          quantidade: parsearValorNumerico(row[5])  // Coluna F (índice 5)
         });
       }
     });
