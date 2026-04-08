@@ -3029,14 +3029,14 @@ function formatarEmailRelatorio(dados, totalSemana, totalMes) {
       html += '<tr>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.cliente + '</td>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.marca + '</td>';
-      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">R$ ' + item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + formatarValor(item.valor) + '</td>';
       html += '</tr>';
       totalPedidos += item.valor;
     });
 
     html += '<tr style="background-color: #ecf0f1; font-weight: bold;">';
     html += '<td colspan="2" style="padding: 10px; border: 1px solid #ddd;">TOTAL</td>';
-    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">R$ ' + totalPedidos.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">' + formatarValor(totalPedidos) + '</td>';
     html += '</tr></tbody></table>';
   } else {
     html += '<p style="color: #95a5a6;">Nenhum pedido a faturar</p>';
@@ -3057,14 +3057,14 @@ function formatarEmailRelatorio(dados, totalSemana, totalMes) {
       html += '<tr>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.cliente + '</td>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.marca + '</td>';
-      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">R$ ' + item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + formatarValor(item.valor) + '</td>';
       html += '</tr>';
       totalEntradas += item.valor;
     });
 
     html += '<tr style="background-color: #ecf0f1; font-weight: bold;">';
     html += '<td colspan="2" style="padding: 10px; border: 1px solid #ddd;">TOTAL</td>';
-    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">R$ ' + totalEntradas.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">' + formatarValor(totalEntradas) + '</td>';
     html += '</tr></tbody></table>';
   } else {
     html += '<p style="color: #95a5a6;">Nenhuma entrada no dia</p>';
@@ -3085,14 +3085,14 @@ function formatarEmailRelatorio(dados, totalSemana, totalMes) {
       html += '<tr>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.cliente + '</td>';
       html += '<td style="padding: 8px; border: 1px solid #ddd;">' + item.marca + '</td>';
-      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">R$ ' + item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+      html += '<td style="padding: 8px; border: 1px solid #ddd; text-align: right;">' + formatarValor(item.valor) + '</td>';
       html += '</tr>';
       totalFaturamento += item.valor;
     });
 
     html += '<tr style="background-color: #ecf0f1; font-weight: bold;">';
     html += '<td colspan="2" style="padding: 10px; border: 1px solid #ddd;">TOTAL</td>';
-    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">R$ ' + totalFaturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+    html += '<td style="padding: 10px; border: 1px solid #ddd; text-align: right;">' + formatarValor(totalFaturamento) + '</td>';
     html += '</tr></tbody></table>';
   } else {
     html += '<p style="color: #95a5a6;">Nenhum faturamento no dia</p>';
@@ -3104,11 +3104,11 @@ function formatarEmailRelatorio(dados, totalSemana, totalMes) {
   html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">';
   html += '<tr style="background-color: #f39c12; color: white;">';
   html += '<td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">Total da Semana (Segunda a Domingo)</td>';
-  html += '<td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold;">R$ ' + totalSemana.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+  html += '<td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold;">' + formatarValor(totalSemana) + '</td>';
   html += '</tr>';
   html += '<tr style="background-color: #9b59b6; color: white;">';
   html += '<td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">Total do Mês Acumulado</td>';
-  html += '<td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold;">R$ ' + totalMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</td>';
+  html += '<td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold;">' + formatarValor(totalMes) + '</td>';
   html += '</tr>';
   html += '</table>';
 
