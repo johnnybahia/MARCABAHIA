@@ -678,69 +678,70 @@ function sincronizarOCsNaAbaControle(sheet) {
   try {
     Logger.log("🔄 Sincronizando OCs na aba de controle...");
 
-    // Lê dados atuais agrupados por OC
     var mapaAtual = agruparDados1PorOC();
     var mapaOCMarca = criarMapaOCMarca();
 
-    // Lê o que já está na aba
     var lastRow = sheet.getLastRow();
     var dadosExistentes = {};
+    var allData = null;
 
     if (lastRow > 1) {
-      var dados = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
-      dados.forEach(function(row, index) {
+      allData = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+      allData.forEach(function(row, index) {
         var oc = row[0].toString().trim();
         dadosExistentes[oc] = {
-          linha: index + 2,
-          valorFaturado: typeof row[4] === 'number' ? row[4] : 0,
-          ultimaDeteccao: row[7] || ""
+          rowIndex: index,
+          valorFaturado: typeof row[4] === 'number' ? row[4] : 0
         };
       });
     }
 
     var novasLinhas = [];
     var linhasAtualizadas = 0;
+    var houveMudancas = false;
 
-    // Processa cada OC atual
     Object.keys(mapaAtual).forEach(function(oc) {
       var item = mapaAtual[oc];
       var marca = buscarMarcaNoMapa(oc, mapaOCMarca);
       var valorTotal = item.valor;
 
       if (dadosExistentes[oc]) {
-        // OC já existe - atualiza apenas valor total e saldo
-        var linha = dadosExistentes[oc].linha;
+        var rowIndex = dadosExistentes[oc].rowIndex;
         var valorFaturado = dadosExistentes[oc].valorFaturado;
         var saldoRestante = valorTotal - valorFaturado;
         var percFaturado = valorTotal > 0 ? (valorFaturado / valorTotal * 100).toFixed(1) + "%" : "0%";
         var status = saldoRestante <= 0 ? "Faturado" : (valorFaturado > 0 ? "Parcial" : "Pendente");
 
-        sheet.getRange(linha, 4).setValue(valorTotal);  // Valor Total
-        sheet.getRange(linha, 6).setValue(saldoRestante);  // Saldo Restante
-        sheet.getRange(linha, 7).setValue(percFaturado);  // %
-        sheet.getRange(linha, 9).setValue(status);  // Status
+        // Atualiza em memória (sem chamadas individuais à API)
+        allData[rowIndex][3] = valorTotal;
+        allData[rowIndex][5] = saldoRestante;
+        allData[rowIndex][6] = percFaturado;
+        allData[rowIndex][8] = status;
 
         linhasAtualizadas++;
-
+        houveMudancas = true;
       } else {
-        // OC nova - adiciona
         novasLinhas.push([
           oc,
           item.cliente,
           marca,
           valorTotal,
-          0,  // Valor Faturado (inicial)
-          valorTotal,  // Saldo Restante
-          "0%",  // % Faturado
-          "",  // Última Detecção
-          "Pendente"  // Status
+          0,
+          valorTotal,
+          "0%",
+          "",
+          "Pendente"
         ]);
       }
     });
 
-    // Adiciona novas linhas
+    // Uma única chamada à API para gravar todas as atualizações
+    if (houveMudancas && allData) {
+      sheet.getRange(2, 1, allData.length, 9).setValues(allData);
+    }
+
     if (novasLinhas.length > 0) {
-      sheet.getRange(lastRow + 1, 1, novasLinhas.length, 9).setValues(novasLinhas);
+      sheet.getRange(sheet.getLastRow() + 1, 1, novasLinhas.length, 9).setValues(novasLinhas);
       Logger.log("➕ Adicionadas " + novasLinhas.length + " novas OCs");
     }
 
@@ -748,9 +749,7 @@ function sincronizarOCsNaAbaControle(sheet) {
       Logger.log("🔄 Atualizadas " + linhasAtualizadas + " OCs existentes");
     }
 
-    // Aplica formatação condicional
     aplicarFormatacaoCondicionalControle(sheet);
-
     Logger.log("✅ Sincronização concluída");
 
   } catch (erro) {
@@ -799,31 +798,41 @@ function registrarFaturamentoNaAbaControle(faturamentosDetectados, dataDeteccao)
     });
 
     var linhasAtualizadas = 0;
+    var houveMudancas = false;
 
-    // Atualiza cada faturamento detectado
+    // Atualiza em memória
     faturamentosDetectados.forEach(function(item) {
       var oc = item.oc;
 
       if (mapaLinhas[oc]) {
         var info = mapaLinhas[oc];
+        var rowIndex = info.linha - 2;
         var novoValorFaturado = info.valorFaturado + item.valor;
         var saldoRestante = info.valorTotal - novoValorFaturado;
         var percFaturado = info.valorTotal > 0 ? (novoValorFaturado / info.valorTotal * 100).toFixed(1) + "%" : "0%";
         var status = saldoRestante <= 0 ? "Faturado" : (novoValorFaturado > 0 ? "Parcial" : "Pendente");
 
-        sheet.getRange(info.linha, 5).setValue(novoValorFaturado);  // Valor Faturado
-        sheet.getRange(info.linha, 6).setValue(saldoRestante);  // Saldo Restante
-        sheet.getRange(info.linha, 7).setValue(percFaturado);  // %
-        sheet.getRange(info.linha, 8).setValue(dataDeteccao);  // Última Detecção
-        sheet.getRange(info.linha, 9).setValue(status);  // Status
+        dados[rowIndex][4] = novoValorFaturado;
+        dados[rowIndex][5] = saldoRestante;
+        dados[rowIndex][6] = percFaturado;
+        dados[rowIndex][7] = dataDeteccao;
+        dados[rowIndex][8] = status;
+
+        // Atualiza para múltiplas detecções da mesma OC na mesma rodada
+        mapaLinhas[oc].valorFaturado = novoValorFaturado;
 
         linhasAtualizadas++;
+        houveMudancas = true;
       }
     });
 
+    // Uma única chamada à API para todas as atualizações
+    if (houveMudancas) {
+      sheet.getRange(2, 1, dados.length, 9).setValues(dados);
+    }
+
     Logger.log("✅ Registrados " + linhasAtualizadas + " faturamentos na aba de controle");
 
-    // Reaplica formatação
     aplicarFormatacaoCondicionalControle(sheet);
 
   } catch (erro) {
@@ -840,22 +849,29 @@ function aplicarFormatacaoCondicionalControle(sheet) {
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) return;
 
-    var dados = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+    var numRows = lastRow - 1;
+    var dados = sheet.getRange(2, 9, numRows, 1).getValues();
 
-    dados.forEach(function(row, index) {
-      var linha = index + 2;
-      var status = row[8].toString();
-      var rangeStatus = sheet.getRange(linha, 9);
+    var backgrounds = [];
+    var fontColors = [];
 
-      // Cores por status
+    dados.forEach(function(row) {
+      var status = row[0].toString();
       if (status === "Faturado") {
-        rangeStatus.setBackground("#4CAF50").setFontColor("#FFFFFF");
+        backgrounds.push(["#4CAF50"]);
+        fontColors.push(["#FFFFFF"]);
       } else if (status === "Parcial") {
-        rangeStatus.setBackground("#FF9800").setFontColor("#FFFFFF");
-      } else if (status === "Pendente") {
-        rangeStatus.setBackground("#F5F5F5").setFontColor("#000000");
+        backgrounds.push(["#FF9800"]);
+        fontColors.push(["#FFFFFF"]);
+      } else {
+        backgrounds.push(["#F5F5F5"]);
+        fontColors.push(["#000000"]);
       }
     });
+
+    var statusRange = sheet.getRange(2, 9, numRows, 1);
+    statusRange.setBackgrounds(backgrounds);
+    statusRange.setFontColors(fontColors);
 
   } catch (erro) {
     Logger.log("❌ Erro ao aplicar formatação: " + erro.toString());
@@ -1701,12 +1717,11 @@ function salvarFaturamentoNoHistorico(dados, data) {
       }
     });
 
-    // Remove registros automáticos antigos que serão atualizados
-    if (lastRow > 1) {
+    // Remove registros automáticos antigos usando dados já lidos (sem re-ler a planilha)
+    if (lastRow > 1 && dadosExistentes) {
       for (var i = lastRow; i >= 2; i--) {
-        var row = sheet.getRange(i, 1, 1, 6).getValues()[0];
+        var row = dadosExistentes[i - 2];
 
-        // Normaliza data
         var dataLinha = row[0];
         if (dataLinha instanceof Date) {
           var d = dataLinha;
@@ -1718,7 +1733,6 @@ function salvarFaturamentoNoHistorico(dados, data) {
           dataLinha = dataLinha.toString().trim();
         }
 
-        // Se é o mesmo dia e NÃO tem observação (automático)
         if (dataLinha === data) {
           var obs = row[4] ? row[4].toString().trim() : "";
           if (!obs || obs === "") {
