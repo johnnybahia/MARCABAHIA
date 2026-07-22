@@ -180,7 +180,13 @@ function doPost(e) {
     if (!sheet) {
       // Se não existir, cria e põe cabeçalho
       sheet = doc.insertSheet("Dados");
-      sheet.appendRow(["Data de Entrega", "Data Recebimento", "Arquivo", "Cliente", "Marca", "Local Entrega", "Qtd", "Unidade", "Valor (R$)", "Ordem de Compra"]);
+      sheet.appendRow(["Data de Entrega", "Data Recebimento", "Arquivo", "Cliente", "Marca", "Local Entrega", "Qtd", "Unidade", "Valor (R$)", "Ordem de Compra", "Tipo de Faturamento"]);
+    } else {
+      // Garante que a coluna "Tipo de Faturamento" (K/11) exista em planilhas antigas
+      var cabecalhoK = sheet.getRange(1, 11).getValue();
+      if (!cabecalhoK) {
+        sheet.getRange(1, 11).setValue("Tipo de Faturamento");
+      }
     }
 
     var json = JSON.parse(e.postData.contents);
@@ -209,13 +215,14 @@ function doPost(e) {
           p.qtd,
           p.unidade,
           p.valor,
-          p.ordemCompra || "N/D"                     // Ordem de Compra
+          p.ordemCompra || "N/D",                    // Ordem de Compra
+          p.tipoFaturamento || ""                    // Tipo de Faturamento (ex.: CONTA E ORDEM VITÓRIA X ITABERABA)
         ]);
       }
     }
 
     if (novasLinhas.length > 0) {
-      sheet.getRange(ultimaLinha + 1, 1, novasLinhas.length, 10).setValues(novasLinhas);
+      sheet.getRange(ultimaLinha + 1, 1, novasLinhas.length, 11).setValues(novasLinhas);
       return ContentService.createTextOutput(JSON.stringify({"status":"Sucesso", "msg": novasLinhas.length + " novos."})).setMimeType(ContentService.MimeType.JSON);
     } else {
       return ContentService.createTextOutput(JSON.stringify({"status":"Neutro", "msg": "Sem novidades."})).setMimeType(ContentService.MimeType.JSON);
@@ -249,22 +256,23 @@ function getDadosPlanilha() {
     var numLinhas = lastRow - 1;
     var inicio = 2;
 
-    var dados = sheet.getRange(inicio, 1, numLinhas, 10).getValues();
+    var dados = sheet.getRange(inicio, 1, numLinhas, 11).getValues();
     Logger.log("✅ Recuperados " + dados.length + " registros");
 
     // Formata os dados para garantir compatibilidade
     var dadosFormatados = dados.map(function(row) {
       return [
-        formatarData(row[0]),            // Data de Entrega
-        formatarData(row[1]),            // Data Recebimento
-        row[2] ? row[2].toString() : "", // Arquivo
-        row[3] ? row[3].toString() : "", // Cliente
-        row[4] ? row[4].toString() : "", // Marca
-        row[5] ? row[5].toString() : "", // Local Entrega
-        formatarNumero(row[6]),          // Qtd
-        row[7] ? row[7].toString() : "", // Unidade
-        formatarValor(row[8]),           // Valor (R$)
-        row[9] ? row[9].toString() : ""  // Ordem de Compra
+        formatarData(row[0]),             // Data de Entrega
+        formatarData(row[1]),             // Data Recebimento
+        row[2] ? row[2].toString() : "",  // Arquivo
+        row[3] ? row[3].toString() : "",  // Cliente
+        row[4] ? row[4].toString() : "",  // Marca
+        row[5] ? row[5].toString() : "",  // Local Entrega
+        formatarNumero(row[6]),           // Qtd
+        row[7] ? row[7].toString() : "",  // Unidade
+        formatarValor(row[8]),            // Valor (R$)
+        row[9] ? row[9].toString() : "",  // Ordem de Compra
+        row[10] ? row[10].toString() : "" // Tipo de Faturamento
       ];
     });
 

@@ -35,6 +35,47 @@ def extrair_local_entrega(texto):
         if "CRUZ DAS ALMAS" not in c.upper(): return c.strip().upper()
     return "Local Não Identificado"
 
+def rotular_unidade_dass(fragmento):
+    """Converte um trecho do PDF (cabeçalho ou endereço) na sigla curta da unidade DASS."""
+    if not fragmento: return ""
+    t = fragmento.upper()
+    if "NE-03" in t or "SEST" in t or "SANTO ESTEVAO" in t or "SANTO ESTÊVÃO" in t: return "SANTO ESTÊVÃO"
+    if "NE-08" in t or "ITABERABA" in t: return "ITABERABA"
+    if "NE-09" in t or "VDC" in t or "VITORIA DA CONQUISTA" in t or "VITÓRIA DA CONQUISTA" in t: return "VITÓRIA"
+    if "SANTO ANTONIO DE JESUS" in t or "SANTO ANTÔNIO DE JESUS" in t or "FL 16" in t or "NE-16" in t or "SAJ" in t: return "SANTO ANTÔNIO DE JESUS"
+    return ""
+
+def extrair_tipo_faturamento(texto):
+    """
+    Lê o 'Tipo de faturamento' do PDF.
+    Quando for 'Conta e ordem', monta a informação completa:
+        CONTA E ORDEM {ORIGEM} X {DESTINO}
+    Ex.: pedido 15939277 (feito pela DASS VITÓRIA para DASS ITABERABA)
+         -> "CONTA E ORDEM VITÓRIA X ITABERABA"
+    """
+    match_tipo = re.search(r'Tipo de faturamento:\s*([^\n]+)', texto, re.IGNORECASE)
+    if not match_tipo:
+        return ""
+    tipo_bruto = match_tipo.group(1).strip()
+
+    # Se não for "Conta e ordem", devolve o tipo como veio (em maiúsculas)
+    if "conta e ordem" not in tipo_bruto.lower():
+        return tipo_bruto.upper()
+
+    # ORIGEM = unidade emissora do pedido (cabeçalho / quem fez o pedido)
+    primeira_linha = texto.split('\n', 1)[0]
+    origem = rotular_unidade_dass(primeira_linha)
+
+    # DESTINO = endereço de entrega (para quem o pedido foi feito)
+    match_entrega = re.search(r'Endereço de entrega:\s*(.*?)(?:Endereço de destino:|CNPJ|\n)', texto, re.IGNORECASE | re.DOTALL)
+    destino = rotular_unidade_dass(match_entrega.group(1)) if match_entrega else ""
+
+    if origem and destino:
+        return f"CONTA E ORDEM {origem} X {destino}"
+    if origem or destino:
+        return ("CONTA E ORDEM " + (origem or destino)).strip()
+    return "CONTA E ORDEM"
+
 def processar_pdf_dass(caminho_arquivo, nome_arquivo):
     try:
         with pdfplumber.open(caminho_arquivo) as pdf:
@@ -83,6 +124,7 @@ def processar_pdf_dass(caminho_arquivo, nome_arquivo):
 
             local_geral = extrair_local_entrega(texto_completo)
             unidade_geral = identificar_unidade(texto_completo)
+            tipo_faturamento = extrair_tipo_faturamento(texto_completo)
 
             # --- TOTAIS ---
             valor_total_doc = 0.0
@@ -104,7 +146,8 @@ def processar_pdf_dass(caminho_arquivo, nome_arquivo):
                 "qtd": qtd_total_doc,
                 "unidade": unidade_geral,
                 "valor": valor_formatado,
-                "ordemCompra": ordem_compra
+                "ordemCompra": ordem_compra,
+                "tipoFaturamento": tipo_faturamento
             }
             return [pedido_unico]
     except Exception as e:
@@ -132,16 +175,16 @@ def main():
     arquivos = [f for f in os.listdir(PASTA_ENTRADA) if f.lower().endswith('.pdf')]
 
     print(f"📂 Processando {len(arquivos)} arquivos...")
-    print("-" * 95)
-    print(f"{'EMISSÃO':<12} | {'ENTREGA':<12} | {'OC':<10} | {'MARCA':<15} | {'VALOR'}")
-    print("-" * 95)
+    print("-" * 120)
+    print(f"{'EMISSÃO':<12} | {'ENTREGA':<12} | {'OC':<10} | {'MARCA':<15} | {'VALOR':<14} | {'TIPO DE FATURAMENTO'}")
+    print("-" * 120)
 
     for arq in arquivos:
         lista_pedidos = processar_pdf_dass(os.path.join(PASTA_ENTRADA, arq), arq)
         if lista_pedidos:
             for p in lista_pedidos:
                 todos_pedidos_para_envio.append(p)
-                print(f"✅ {p['dataRecebimento']:<12} | {p['dataPedido']:<12} | {p['ordemCompra']:<10} | {p['marca']:<15} | {p['valor']}")
+                print(f"✅ {p['dataRecebimento']:<12} | {p['dataPedido']:<12} | {p['ordemCompra']:<10} | {p['marca']:<15} | {p['valor']:<14} | {p.get('tipoFaturamento','')}")
             arquivos_para_mover.append(arq)
         else:
             print(f"⚠️ Ignorado: {arq}")
