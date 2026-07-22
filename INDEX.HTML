@@ -1285,6 +1285,7 @@
               <th>Qtd</th>
               <th>Unidade</th>
               <th>Valor (R$)</th>
+              <th>Tipo de Faturamento</th>
             </tr>
           </thead>
           <tbody id="tabelaCorpo">
@@ -1825,7 +1826,7 @@
       tbody.innerHTML = "";
       
       if (!dados || dados.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center; padding:30px; color:#999;'>Nenhum registro encontrado para estes filtros.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='10' style='text-align:center; padding:30px; color:#999;'>Nenhum registro encontrado para estes filtros.</td></tr>";
         return;
       }
 
@@ -1851,6 +1852,7 @@
           <td>${r[6]}</td>
           <td><span class="${classeBadge}">${r[7]}</span></td>
           <td style="color:#2c3e50; font-weight:bold;">${r[8]}</td>
+          <td>${r[10] || ''}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -3192,6 +3194,7 @@
           <td>${r[6]}</td>
           <td><span class="${classeBadge}">${r[7]}</span></td>
           <td style="color:#2c3e50; font-weight:bold;">${r[8]}</td>
+          <td>${r[10] || ''}</td>
         `;
         tbody.appendChild(tr);
       });
