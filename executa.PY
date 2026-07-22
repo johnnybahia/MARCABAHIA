@@ -66,9 +66,16 @@ def extrair_tipo_faturamento(texto):
     primeira_linha = texto.split('\n', 1)[0]
     origem = rotular_unidade_dass(primeira_linha)
 
-    # DESTINO = endereço de entrega (para quem o pedido foi feito)
-    match_entrega = re.search(r'Endereço de entrega:\s*(.*?)(?:Endereço de destino:|CNPJ|\n)', texto, re.IGNORECASE | re.DOTALL)
-    destino = rotular_unidade_dass(match_entrega.group(1)) if match_entrega else ""
+    # DESTINO = destinatário final do pedido (para quem o pedido foi feito).
+    # Em "conta e ordem" o "Endereço de destino" é o destinatário FINAL; o
+    # "Endereço de entrega" pode ser apenas um ponto intermediário (ex.: pedido
+    # 15912541 entrega em ITABERABA mas o destino final é SANTO ANTÔNIO DE JESUS).
+    match_destino = re.search(r'Endereço de destino:\s*([^\n]+)', texto, re.IGNORECASE)
+    destino = rotular_unidade_dass(match_destino.group(1)) if match_destino else ""
+    if not destino:
+        # Fallback: se não houver "Endereço de destino", usa o "Endereço de entrega"
+        match_entrega = re.search(r'Endereço de entrega:\s*(.*?)(?:Endereço de destino:|CNPJ|\n)', texto, re.IGNORECASE | re.DOTALL)
+        destino = rotular_unidade_dass(match_entrega.group(1)) if match_entrega else ""
 
     if origem and destino:
         return f"CONTA E ORDEM {origem} X {destino}"
