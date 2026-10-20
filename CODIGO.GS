@@ -4164,7 +4164,7 @@ function onOpen() {
     .addItem('📋 Migrar Entradas para Histórico', 'migrarEntradasParaHistorico')
     .addItem('🔍 Executar Verificação de Faturamento', 'executarVerificacaoFaturamento')
     .addSeparator()
-    .addItem('🔧 Corrigir Faturamento (Geral)', 'corrigirFaturamento')
+    .addItem('🔄 Reset de pedidos abertos', 'corrigirFaturamento')
     .addItem('↩️ Restaurar Snapshot Anterior (IMPORTRANGE)', 'corrigirFaturamentoComBackup')
     .addItem('🔁 Recalcular Faturamento Correto (IMPORTRANGE já carregado)', 'recalcularFaturamentoCorreto')
     .addToUi();
