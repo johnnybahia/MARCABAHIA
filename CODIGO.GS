@@ -1,7 +1,7 @@
 // --- ARQUIVO: Código.gs ---
 
 // Versão do programa (fonte única) — ver CLAUDE.md
-var VERSAO = '1.0.0';
+var VERSAO = '1.1.0';
 var VERSAO_DATA = '10/11/2026';
 
 // ========================================
@@ -3324,8 +3324,14 @@ function lerDestinatarios() {
 function usuarioEhRevisor(usuario) {
   var u = usuario ? usuario.toString().trim().toUpperCase() : "";
   if (!u) return false;
-  return lerDestinatarios().some(function(r) {
-    return r.revisor && r.usuario === u;
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("senha");
+  if (!sheet || sheet.getLastRow() < 2 || sheet.getMaxColumns() < 3) return false;
+
+  // Aba "senha": A = usuário, B = senha, C = "x" libera o botão Enviar faturamento
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues().some(function(row) {
+    return row[0].toString().trim().toUpperCase() === u &&
+           row[2].toString().trim().toLowerCase() === "x";
   });
 }
 
